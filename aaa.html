@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>抬手检测API</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      background: #111;
+      color: #0f0;
+      font-family: 'Courier New', monospace;
+      line-height: 1.6;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+      padding: 20px;
+      border-bottom: 2px solid #0f0;
+    }
+    
+    h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+      text-shadow: 0 0 10px #0f0;
+    }
+    
+    .subtitle {
+      color: #8f8;
+      font-size: 1.1em;
+    }
+    
+    .main-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+      margin-bottom: 30px;
+    }
+    
+    @media (max-width: 768px) {
+      .main-content {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .video-section, .controls-section {
+      background: rgba(0, 30, 0, 0.3);
+      padding: 20px;
+      border-radius: 10px;
+      border: 1px solid #0f0;
+    }
+    
+    .video-container {
+      position: relative;
+      width: 100%;
+      max-width: 100%;
+    }
+    
+    video {
+      display: block;
+      width: 100%;
+      border: 2px solid #0f0;
+      border-radius: 8px;
+      background: #000;
+      transform: scaleX(-1);
+    }
+    
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+      margin-bottom: 25px;
+    }
+    
+    button {
+      padding: 12px 20px;
+      background: linear-gradient(45deg, #0f0, #0a0);
+      color: #000;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      font-family: 'Courier New', monospace;
+      transition: all 0.3s ease;
+      border: 1px solid #0f0;
+    }
+    
+    button:hover {
+      background: linear-gradient(45deg, #0f0, #0f0);
+      box-shadow: 0 0 15px #0f0;
+      transform: translateY(-2px);
+    }
+    
+    button:disabled {
+      background: #333;
+      color: #666;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    
+    .status-panel {
+      background: rgba(0, 20, 0, 0.5);
+      padding: 20px;
+      border-radius: 8px;
+      border: 1px solid #0f0;
+      margin-bottom: 20px;
+    }
+    
+    .status-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      padding: 8px;
+      background: rgba(0, 40, 0, 0.3);
+      border-radius: 4px;
+    }
+    
+    .status-label {
+      font-weight: bold;
+      color: #8f8;
+    }
+    
+    .status-value {
+      color: #0f0;
+    }
+    
+    .hands-info {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-top: 15px;
+    }
+    
+    .hand-panel {
+      background: rgba(0, 50, 0, 0.3);
+      padding: 15px;
+      border-radius: 6px;
+      border: 1px solid #0f0;
+    }
+    
+    .hand-title {
+      text-align: center;
+      font-weight: bold;
+      margin-bottom: 10px;
+      color: #8f8;
+    }
+    
+    .gesture-display {
+      font-size: 2em;
+      text-align: center;
+      min-height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .logs-section {
+      grid-column: 1 / -1;
+      background: rgba(0, 30, 0, 0.3);
+      padding: 20px;
+      border-radius: 10px;
+      border: 1px solid #0f0;
+      margin-top: 20px;
+    }
+    
+    .log-container {
+      height: 200px;
+      overflow-y: auto;
+      background: #000;
+      border: 1px solid #0f0;
+      border-radius: 6px;
+      padding: 15px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9em;
+    }
+    
+    .log-entry {
+      margin-bottom: 8px;
+      padding: 5px;
+      border-left: 3px solid #0f0;
+      padding-left: 10px;
+    }
+    
+    .config-panel {
+      background: rgba(0, 20, 0, 0.5);
+      padding: 20px;
+      border-radius: 8px;
+      border: 1px solid #0f0;
+      margin-top: 20px;
+    }
+    
+    .config-item {
+      margin-bottom: 15px;
+    }
+    
+    .config-label {
+      display: block;
+      margin-bottom: 5px;
+      color: #8f8;
+      font-weight: bold;
+    }
+    
+    input[type="range"] {
+      width: 100%;
+      height: 8px;
+      background: #333;
+      border-radius: 4px;
+      outline: none;
+    }
+    
+    input[type="range"]::-webkit-slider-thumb {
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      background: #0f0;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    
+    .config-value {
+      text-align: right;
+      color: #0f0;
+      font-weight: bold;
+    }
+    
+    .gesture-info {
+      background: rgba(0, 40, 0, 0.5);
+      padding: 15px;
+      border-radius: 6px;
+      margin-top: 15px;
+      border: 1px solid #0f0;
+    }
+    
+    footer {
+      text-align: center;
+      margin-top: 40px;
+      padding: 20px;
+      border-top: 1px solid #0f0;
+      color: #8f8;
+      font-size: 0.9em;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🎯 抬手检测 API</h1>
+      <div class="subtitle">专注抬手动作识别</div>
+    </header>
+
+    <div class="main-content">
+      <div class="video-section">
+        <h2>📹 实时检测画面</h2>
+        <div class="video-container">
+          <video id="v" autoplay playsinline></video>
+          <canvas id="c"></canvas>
+        </div>
+        
+        <div class="hands-info">
+          <div class="hand-panel">
+            <div class="hand-title">左手</div>
+            <div class="gesture-display" id="leftHandIndicator">🟡 未检测</div>
+          </div>
+          <div class="hand-panel">
+            <div class="hand-title">右手</div>
+            <div class="gesture-display" id="rightHandIndicator">🟡 未检测</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="controls-section">
+        <h2>⚙️ 控制面板</h2>
+        
+        <div class="controls">
+          <button onclick="GestureAPI.start()" id="startBtn">🚀 开始检测</button>
+          <button onclick="GestureAPI.stop()" id="stopBtn" disabled>🛑 停止检测</button>
+          <button onclick="GestureAPI.toggleDebug()" id="debugBtn">🐛 调试模式</button>
+          <button onclick="clearLogs()">🗑️ 清空日志</button>
+        </div>
+
+        <div class="status-panel">
+          <h3>📊 系统状态</h3>
+          <div class="status-item">
+            <span class="status-label">检测状态:</span>
+            <span class="status-value" id="statusValue">未启动</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">检测手数:</span>
+            <span class="status-value" id="handsValue">0/2</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">运行时间:</span>
+            <span class="status-value" id="uptimeValue">0s</span>
+          </div>
+        </div>
+
+        <div class="config-panel">
+          <h3>🎛️ 识别参数</h3>
+          <div class="config-item">
+            <label class="config-label">抬手灵敏度: <span id="liftThValue">0.08</span></label>
+            <input type="range" id="liftTh" min="0.03" max="0.2" step="0.01" value="0.08" onchange="updateConfig()">
+            <div class="config-value">值越小越灵敏</div>
+          </div>
+          <div class="config-item">
+            <label class="config-label">手势保持: <span id="gestureHoldValue">2000</span>ms</label>
+            <input type="range" id="gestureHold" min="1000" max="5000" step="500" value="2000" onchange="updateConfig()">
+            <div class="config-value">手势状态保持时间</div>
+          </div>
+        </div>
+
+        <div class="gesture-info">
+          <h4>💡 识别说明</h4>
+          <p><strong>抬手识别</strong>: 检测手部上下移动</p>
+          <p><strong>状态保持</strong>: 抬手状态持续显示</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="logs-section">
+      <h2>📝 运行日志</h2>
+      <div class="log-container" id="logContainer"></div>
+    </div>
+
+    <footer>
+      <p>💡 提示: 专注抬手动作识别</p>
+    </footer>
+  </div>
+
+  <script>
+    // 抬手检测 API
+    const GestureAPI = {
+      config: {
+        DEBUG: false,
+        LIFT_TH: 0.08,           // 抬手灵敏度
+        GESTURE_HOLD_TIME: 2000, // 手势保持时间
+        maxNumHands: 2,
+        minDetectionConfidence: 0.7
+      },
+
+      state: {
+        isRunning: false,
+        lastHandData: {},
+        camera: null,
+        hands: null,
+        startTime: 0,
+        handCount: 0,
+        hasJumped: false // 标记是否已跳转，避免重复跳转
+      },
+
+      callbacks: {
+        onLift: null,
+        onLiftEnd: null,
+        onHandDetected: null,
+        onHandLost: null,
+        onError: null
+      },
+
+      elements: {
+        video: document.getElementById('v'),
+        canvas: document.getElementById('c'),
+        ctx: null,
+        log: document.getElementById('logContainer')
+      },
+
+      start: async function() {
+        if (this.state.isRunning) {
+          this._log('检测已在运行中', 'warning');
+          return;
+        }
+
+        try {
+          this._log('正在启动抬手检测...', 'info');
+          await this._initializeCamera();
+          await this._initializeHands();
+          this.state.isRunning = true;
+          this.state.startTime = performance.now();
+          this.state.lastHandData = {};
+          this.state.hasJumped = false; // 重置跳转状态
+          
+          this._updateUI();
+          this._log('🎉 抬手检测已启动成功', 'success');
+          this._log('👋 抬手识别：检测手部上下移动', 'info');
+          this._triggerCallback('onHandDetected', { action: 'system', message: '检测启动' });
+        } catch (error) {
+          this._log('❌ 启动失败: ' + error.message, 'error');
+          this._triggerCallback('onError', { error: error });
+        }
+      },
+
+      stop: function() {
+        if (!this.state.isRunning) return;
+
+        if (this.state.camera) {
+          this.state.camera.stop();
+        }
+        if (this.elements.video.srcObject) {
+          this.elements.video.srcObject.getTracks().forEach(track => track.stop());
+        }
+        
+        this.state.isRunning = false;
+        this.state.lastHandData = {};
+        this.state.handCount = 0;
+        
+        this._updateUI();
+        this._resetHandDisplays();
+        this._log('🛑 抬手检测已停止', 'warning');
+        this._triggerCallback('onHandLost', { action: 'system', message: '检测停止' });
+      },
+
+      on: function(eventName, callback) {
+        if (this.callbacks.hasOwnProperty(eventName)) {
+          this.callbacks[eventName] = callback;
+        }
+        return this;
+      },
+
+      setConfig: function(newConfig) {
+        Object.assign(this.config, newConfig);
+        if (this.state.hands) {
+          this.state.hands.setOptions({
+            maxNumHands: this.config.maxNumHands,
+            modelComplexity: 1,
+            minDetectionConfidence: this.config.minDetectionConfidence
+          });
+        }
+        this._updateConfigDisplay();
+        this._log(`配置已更新: 抬手灵敏度=${this.config.LIFT_TH}`, 'info');
+        return this;
+      },
+
+      toggleDebug: function() {
+        this.config.DEBUG = !this.config.DEBUG;
+        this._log('调试模式: ' + (this.config.DEBUG ? '开启' : '关闭'), 'info');
+      },
+
+      // 内部方法
+      _initializeCamera: function() {
+        return new Promise((resolve, reject) => {
+          navigator.mediaDevices.getUserMedia({ 
+            video: { 
+              facingMode: 'user',
+              width: { ideal: 640 },
+              height: { ideal: 480 }
+            } 
+          }).then(stream => {
+            this.elements.video.srcObject = stream;
+            this.elements.video.onloadedmetadata = () => {
+              this.elements.canvas.width = this.elements.video.videoWidth;
+              this.elements.canvas.height = this.elements.video.videoHeight;
+              this.elements.ctx = this.elements.canvas.getContext('2d');
+              resolve();
+            };
+          }).catch(reject);
+        });
+      },
+
+      _initializeHands: function() {
+        return new Promise((resolve) => {
+          const script = document.createElement('script');
+          script.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/hands.min.js';
+          script.onload = () => {
+            this.state.hands = new Hands({
+              locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/${file}`
+            });
+
+            this.state.hands.setOptions({
+              maxNumHands: this.config.maxNumHands,
+              modelComplexity: 1,
+              minDetectionConfidence: this.config.minDetectionConfidence
+            });
+
+            this.state.hands.onResults(this._onResults.bind(this));
+
+            const cameraScript = document.createElement('script');
+            cameraScript.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3/camera_utils.min.js';
+            cameraScript.onload = () => {
+              this.state.camera = new Camera(this.elements.video, {
+                onFrame: async () => {
+                  if (this.state.isRunning) {
+                    await this.state.hands.send({ image: this.elements.video });
+                  }
+                },
+                width: this.elements.canvas.width,
+                height: this.elements.canvas.height
+              });
+
+              this.state.camera.start();
+              resolve();
+            };
+            document.head.appendChild(cameraScript);
+          };
+          document.head.appendChild(script);
+        });
+      },
+
+      _onResults: function(results) {
+        if (!this.elements.ctx) return;
+
+        this.elements.ctx.clearRect(0, 0, this.elements.canvas.width, this.elements.canvas.height);
+        this._resetHandDisplays();
+
+        if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+          const now = performance.now();
+          this.state.handCount = results.multiHandLandmarks.length;
+
+          results.multiHandLandmarks.forEach((landmarks, index) => {
+            const handedness = results.multiHandedness && results.multiHandedness[index] 
+              ? results.multiHandedness[index].label 
+              : 'Unknown';
+            
+            const correctedHandedness = this._correctHandedness(handedness);
+            const handId = correctedHandedness;
+
+            if (!this.state.lastHandData[handId]) {
+              this.state.lastHandData[handId] = { 
+                lastWy: -1, 
+                lastTime: 0,
+                gestureState: 'open',
+                gestureStartTime: 0,
+                lastGestureTime: 0,
+                liftDirection: null
+              };
+            }
+
+            const handData = this.state.lastHandData[handId];
+            const handColor = correctedHandedness === 'Left' ? '#0ff' : '#f0f';
+            const currentTime = performance.now();
+
+            // 抬手检测
+            const wristY = landmarks[0].y;
+            let isLiftNow = false;
+            let liftDirection = null;
+            
+            if (handData.lastWy >= 0) {
+              const deltaY = wristY - handData.lastWy;
+              const absDeltaY = Math.abs(deltaY);
+              const deltaTime = now - handData.lastTime;
+              
+              if (absDeltaY > this.config.LIFT_TH && deltaTime < 1000) {
+                isLiftNow = true;
+                liftDirection = deltaY < 0 ? 'up' : 'down';
+                handData.liftDirection = liftDirection;
+              }
+            }
+
+            // 手势状态管理
+            const timeSinceLastGesture = currentTime - handData.lastGestureTime;
+            const shouldKeepGesture = timeSinceLastGesture < this.config.GESTURE_HOLD_TIME;
+
+            if (isLiftNow) {
+              // 抬手状态
+              handData.lastGestureTime = currentTime;
+              
+              if (handData.gestureState !== 'lift') {
+                handData.gestureStartTime = currentTime;
+                handData.gestureState = 'lift';
+                this._updateHandDisplay(correctedHandedness, `👋 抬手${liftDirection === 'up' ? '↑' : '↓'}`, handColor);
+                this._triggerCallback('onLift', {
+                  gesture: 'hand_lift',
+                  handedness: correctedHandedness,
+                  direction: liftDirection,
+                  timestamp: now
+                });
+                this._log(`👋 ${correctedHandedness} 抬手${liftDirection === 'up' ? '向上' : '向下'}`, 'success');
+              } else {
+                // 持续抬手状态
+                const holdDuration = currentTime - handData.gestureStartTime;
+                if (holdDuration > 1000) {
+                  this._updateHandDisplay(correctedHandedness, `👋 抬手${liftDirection === 'up' ? '↑' : '↓'} (${Math.floor(holdDuration/1000)}s)`, handColor);
+                }
+              }
+            } else {
+              // 没有检测到新手势，检查是否需要保持之前的手势状态
+              if (shouldKeepGesture) {
+                // 保持之前的手势状态
+                if (handData.gestureState === 'lift') {
+                  this._updateHandDisplay(correctedHandedness, `👋 抬手${handData.liftDirection === 'up' ? '↑' : '↓'}`, handColor);
+                } else {
+                  this._updateHandDisplay(correctedHandedness, '🖐️ 张开', '#0f0');
+                }
+              } else {
+                // 手势状态结束
+                if (handData.gestureState === 'lift') {
+                  this._triggerCallback('onLiftEnd', {
+                    gesture: 'hand_lift',
+                    handedness: correctedHandedness,
+                    timestamp: now
+                  });
+                  this._log(`👋 ${correctedHandedness} 抬手结束`, 'info');
+                }
+                handData.gestureState = 'open';
+                this._updateHandDisplay(correctedHandedness, '🖐️ 张开', '#0f0');
+              }
+            }
+
+            // 存储当前帧数据用于下一帧计算
+            handData.lastWy = wristY;
+            handData.lastTime = now;
+
+            // 绘制手部关键点（调试模式）
+            if (this.config.DEBUG) {
+              this._drawHandLandmarks(landmarks, handColor);
+            }
+          });
+        } else {
+          // 没有检测到手
+          this.state.handCount = 0;
+          this.state.lastHandData = {};
+        }
+
+        // 更新状态信息
+        this._updateStatus();
+      },
+
+      _correctHandedness: function(handedness) {
+        // 修正镜像导致的左右手识别问题
+        return handedness === 'Right' ? 'Left' : 'Right';
+      },
+
+      _drawHandLandmarks: function(landmarks, color) {
+        if (!this.elements.ctx) return;
+
+        // 绘制手腕到指尖的连线
+        const connections = [
+          [0, 1], [1, 2], [2, 3], [3, 4],  // 拇指
+          [0, 5], [5, 6], [6, 7], [7, 8],  // 食指
+          [0, 9], [9, 10], [10, 11], [11, 12],  // 中指
+          [0, 13], [13, 14], [14, 15], [15, 16],  // 无名指
+          [0, 17], [17, 18], [18, 19], [19, 20]   // 小指
+        ];
+
+        this.elements.ctx.save();
+        this.elements.ctx.scale(-1, 1);
+        this.elements.ctx.translate(-this.elements.canvas.width, 0);
+        
+        // 绘制连接线
+        this.elements.ctx.lineWidth = 2;
+        this.elements.ctx.strokeStyle = color;
+        connections.forEach(connection => {
+          const [i, j] = connection;
+          this.elements.ctx.beginPath();
+          this.elements.ctx.moveTo(
+            landmarks[i].x * this.elements.canvas.width,
+            landmarks[i].y * this.elements.canvas.height
+          );
+          this.elements.ctx.lineTo(
+            landmarks[j].x * this.elements.canvas.width,
+            landmarks[j].y * this.elements.canvas.height
+          );
+          this.elements.ctx.stroke();
+        });
+
+        // 绘制关键点
+        this.elements.ctx.fillStyle = '#0f0';
+        landmarks.forEach(landmark => {
+          this.elements.ctx.beginPath();
+          this.elements.ctx.arc(
+            landmark.x * this.elements.canvas.width,
+            landmark.y * this.elements.canvas.height,
+            3, 0, 2 * Math.PI
+          );
+          this.elements.ctx.fill();
+        });
+        
+        this.elements.ctx.restore();
+      },
+
+      _updateHandDisplay: function(handedness, text, color) {
+        const elementId = handedness.toLowerCase() + 'HandIndicator';
+        const element = document.getElementById(elementId);
+        if (element) {
+          element.textContent = text;
+          element.style.color = color;
+        }
+      },
+
+      _resetHandDisplays: function() {
+        document.getElementById('leftHandIndicator').textContent = '🟡 未检测';
+        document.getElementById('leftHandIndicator').style.color = '#0f0';
+        document.getElementById('rightHandIndicator').textContent = '🟡 未检测';
+        document.getElementById('rightHandIndicator').style.color = '#0f0';
+      },
+
+      _updateStatus: function() {
+        // 更新手数显示
+        document.getElementById('handsValue').textContent = `${this.state.handCount}/2`;
+        
+        // 更新运行时间
+        if (this.state.isRunning) {
+          const uptime = Math.floor((performance.now() - this.state.startTime) / 1000);
+          document.getElementById('uptimeValue').textContent = `${uptime}s`;
+        }
+      },
+
+      _updateUI: function() {
+        document.getElementById('statusValue').textContent = this.state.isRunning ? '运行中' : '未启动';
+        document.getElementById('startBtn').disabled = this.state.isRunning;
+        document.getElementById('stopBtn').disabled = !this.state.isRunning;
+      },
+
+      _updateConfigDisplay: function() {
+        document.getElementById('liftThValue').textContent = this.config.LIFT_TH.toFixed(2);
+        document.getElementById('gestureHoldValue').textContent = this.config.GESTURE_HOLD_TIME;
+      },
+
+      _log: function(message, type = 'info') {
+        const entry = document.createElement('div');
+        entry.className = `log-entry ${type}`;
+        entry.style.borderLeftColor = type === 'error' ? '#f00' : type === 'warning' ? '#ff0' : '#0f0';
+        entry.style.color = type === 'error' ? '#f00' : type === 'warning' ? '#ff0' : '#0f0';
+        entry.innerHTML = `<span style="color: #8f8;">[${new Date().toLocaleTimeString()}]</span> ${message}`;
+        this.elements.log.appendChild(entry);
+        this.elements.log.scrollTop = this.elements.log.scrollHeight;
+      },
+
+      _triggerCallback: function(callbackName, data) {
+        if (typeof this.callbacks[callbackName] === 'function') {
+          this.callbacks[callbackName](data);
+        }
+      }
+    };
+
+    // 配置更新函数
+    function updateConfig() {
+      const liftTh = parseFloat(document.getElementById('liftTh').value);
+      const gestureHold = parseInt(document.getElementById('gestureHold').value);
+      
+      GestureAPI.setConfig({
+        LIFT_TH: liftTh,
+        GESTURE_HOLD_TIME: gestureHold
+      });
+    }
+
+    // 清空日志
+    function clearLogs() {
+      document.getElementById('logContainer').innerHTML = '';
+      GestureAPI._log('日志已清空', 'info');
+    }
+
+    // 绑定抬手事件 - 识别到抬手自动跳转到指定易企秀链接
+    GestureAPI.on('onLift', (event) => {
+      // 防止重复跳转
+      if (!GestureAPI.state.hasJumped) {
+        GestureAPI._log('检测到抬手动作，正在跳转到指定链接...', 'success');
+        GestureAPI.state.hasJumped = true;
+        // 跳转新的易企秀链接
+        window.location.href = 'https://v.eqxiu.com/s/bZaOGBmZ?bt=yxy&eip=true';
+      }
+      
+      if (GestureAPI.config.DEBUG) {
+        console.log('抬手事件:', event);
+      }
+    });
+
+    // 初始化
+    document.addEventListener('DOMContentLoaded', function() {
+      GestureAPI._updateConfigDisplay();
+      GestureAPI._log('系统就绪，点击开始检测', 'info');
+      GestureAPI._log('💡 识别到抬手将自动跳转到指定易企秀链接', 'info');
+    });
+
+    window.GestureAPI = GestureAPI;
+    window.updateConfig = updateConfig;
+    window.clearLogs = clearLogs;
+  </script>
+</body>
+</html>
